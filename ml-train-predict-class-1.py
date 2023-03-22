@@ -5,9 +5,11 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn import tree
+from sklearn.svm import SVC
 
 
-def train_and_predict(train_input_features, train_outputs, prediction_features):
+def train_and_predict(train_input_features, train_outputs, prediction_features, method='log_reg'):
     """
     :param train_input_features: (numpy.array) A two-dimensional NumPy array where each element
                         is an array containing features(e.g. sepal length, sepal width, petal length, and petal width)   
@@ -19,10 +21,20 @@ def train_and_predict(train_input_features, train_outputs, prediction_features):
     :returns: (list) The function should return an iterable (like list or numpy.ndarray) of the predicted 
                         iris species, one for each item in prediction_features
     """   
-    # l1 regularization gives better results
-    lr = LogisticRegression(penalty='l1', solver='liblinear', C=10, random_state=0)
-    lr.fit(train_input_features, train_outputs)
-    prediction = lr.predict(prediction_features)
+    if method == 'log_reg':
+        # logistic regression model
+        model = LogisticRegression(penalty='l2', solver='liblinear', C=10, random_state=0)
+    elif method == 'des_tree':
+        # decision tree
+        print("decision tree")
+        model = tree.DecisionTreeClassifier(criterion= 'entropy', random_state=0)
+    elif method == 'svc' :
+        # support vector machine
+        model = SVC(kernel='linear', C=1.0, random_state=0)
+    
+    model.fit(train_input_features, train_outputs)
+    prediction = model.predict(prediction_features)
+    
     return prediction
 
 iris = datasets.load_iris()
@@ -31,17 +43,30 @@ y = iris.target
 sc = StandardScaler()
 sc.fit(X)
 X = sc.transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                    test_size=0.25, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
 
-y_pred = train_and_predict(X_train, y_train, X_test)
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+# now comparing different models
+y_pred = train_and_predict(X_train, y_train, X_test, method='log_reg')
 confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
-print("Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+print("LogRes Accuracy: ", metrics.accuracy_score(y_test, y_pred))
 print("Test Confusion matrix :\n",confusion_matrix)
+cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax1)
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
-
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
+y_pred = train_and_predict(X_train, y_train, X_test, method='des_tree')
+confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
+print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+print("Test Confusion matrix :\n",confusion_matrix)
 cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax2)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+y_pred = train_and_predict(X_train, y_train, X_test, method='svc')
+confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
+print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+print("Test Confusion matrix :\n",confusion_matrix)
+cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax3)
+
 plt.show()
 
 
