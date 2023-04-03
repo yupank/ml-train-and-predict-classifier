@@ -52,6 +52,7 @@ confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
 print("LogRes Accuracy: ", metrics.accuracy_score(y_test, y_pred))
 print("Test Confusion matrix :\n",confusion_matrix)
 cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax1)
+ax1.set_title('Logistic Regression')
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
 y_pred = train_and_predict(X_train, y_train, X_test, method='des_tree')
@@ -59,6 +60,7 @@ confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
 print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
 print("Test Confusion matrix :\n",confusion_matrix)
 cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax2)
+ax2.set_title('Decision Tree Classifier')
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
 y_pred = train_and_predict(X_train, y_train, X_test, method='svc')
@@ -66,7 +68,8 @@ confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
 print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
 print("Test Confusion matrix :\n",confusion_matrix)
 cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax3)
-
+ax3.set_title("Support Vector Machine")
+fig.suptitle("Iris classification by different models - confusion matrices", fontsize=15)
 plt.show()
 
 
