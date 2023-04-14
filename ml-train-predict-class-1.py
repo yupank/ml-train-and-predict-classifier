@@ -36,6 +36,34 @@ def train_and_predict(train_input_features, train_outputs, prediction_features, 
     prediction = model.predict(prediction_features)
     
     return prediction
+def compare_models(X_train, X_test, y_train, y_test, dataset_name='iris'):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+    # now comparing different models
+    y_pred = train_and_predict(X_train, y_train, X_test, method='log_reg')
+    confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
+    print("LogRes Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+    print("Test Confusion matrix :\n",confusion_matrix)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax1)
+    ax1.set_title('Logistic Regression')
+
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
+    y_pred = train_and_predict(X_train, y_train, X_test, method='des_tree')
+    confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
+    print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+    print("Test Confusion matrix :\n",confusion_matrix)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax2)
+    ax2.set_title('Decision Tree Classifier')
+
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+    y_pred = train_and_predict(X_train, y_train, X_test, method='svc')
+    confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
+    print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
+    print("Test Confusion matrix :\n",confusion_matrix)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax3)
+    ax3.set_title("Support Vector Machine")
+    fig.suptitle(f'{dataset_name}  classification by different models - confusion matrices', fontsize=15)
+    fig.savefig(f'./results/{dataset_name}_classifiers_1.svg',format='svg')
+    plt.show()
 
 iris = datasets.load_iris()
 X = iris.data
@@ -43,33 +71,18 @@ y = iris.target
 sc = StandardScaler()
 sc.fit(X)
 X = sc.transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
-
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
-# now comparing different models
-y_pred = train_and_predict(X_train, y_train, X_test, method='log_reg')
-confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
-print("LogRes Accuracy: ", metrics.accuracy_score(y_test, y_pred))
-print("Test Confusion matrix :\n",confusion_matrix)
-cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax1)
-ax1.set_title('Logistic Regression')
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
-y_pred = train_and_predict(X_train, y_train, X_test, method='des_tree')
-confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
-print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
-print("Test Confusion matrix :\n",confusion_matrix)
-cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax2)
-ax2.set_title('Decision Tree Classifier')
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
-y_pred = train_and_predict(X_train, y_train, X_test, method='svc')
-confusion_matrix = metrics.confusion_matrix(y_test,y_pred)
-print("Tree Accuracy: ", metrics.accuracy_score(y_test, y_pred))
-print("Test Confusion matrix :\n",confusion_matrix)
-cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix).plot(ax=ax3)
-ax3.set_title("Support Vector Machine")
-fig.suptitle("Iris classification by different models - confusion matrices", fontsize=15)
-plt.show()
 
+
+# compare_models(X_train, X_test, y_train, y_test)
+
+digits = datasets.load_digits()
+X = digits.images.reshape((len(digits.images), -1))
+y = digits.target
+# Split data into 50% train and 50% test subsets
+# X_train, X_test, y_train, y_test = train_test_split(
+#     data, digits.target, test_size=0.5, shuffle=False
+# )
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+compare_models(X_train, X_test, y_train, y_test, dataset_name='digits')
 
