@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as nm
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
@@ -65,6 +64,7 @@ def compare_models(X_train, X_test, y_train, y_test, dataset_name='iris'):
     fig.savefig(f'./results/{dataset_name}_classifiers_1.svg',format='svg')
     plt.show()
 
+# Iris classification
 iris = datasets.load_iris()
 X = iris.data
 y = iris.target
@@ -73,12 +73,14 @@ sc.fit(X)
 X = sc.transform(X)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
 
+compare_models(X_train, X_test, y_train, y_test)
 
-# compare_models(X_train, X_test, y_train, y_test)
-
+# Digits classification
 digits = datasets.load_digits()
 X = digits.images.reshape((len(digits.images), -1))
 y = digits.target
+sc.fit(X)
+X = sc.transform(X)
 # Split data into 50% train and 50% test subsets
 # X_train, X_test, y_train, y_test = train_test_split(
 #     data, digits.target, test_size=0.5, shuffle=False
