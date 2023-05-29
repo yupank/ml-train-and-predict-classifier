@@ -8,6 +8,15 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from math import ceil, floor, sqrt
 
+def make_mock_clusters(mock_clusters_num):
+    # utility function generating mock signal data to test clustering and PCA:
+    # normal distribution blobs (with overlap) and different sample size
+    pop_size = 1000
+    mock_centers = [[8+3*n,1.2+0.3*n*(n+1),8+n*n+3*n] for n in range(mock_clusters_num)]
+    mock_stds = [1+0.2*n*n for n in range(mock_clusters_num)]
+    mock_samples = [floor(pop_size*((1-n/mock_clusters_num))) for n in range(mock_clusters_num)]
+    return datasets.make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
+
 def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var=None, dataset_name=''):
     """ the function performs unsupervised clasterisation of signals (optionally - time lapsed) using K-Means 
         Arguments: 
@@ -96,7 +105,7 @@ def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
         Returns: accuracy calculated using sklearn.metrics or -1 if parameters are incorrect 
     """
     # align lables
-    if cluster_seeds.shape == fit_model.cluster_centers_.shape :
+    if cluster_seeds.shape[0] == fit_model.cluster_centers_.shape[0]:
         nearest_centers = [ np.argmin([ la.norm(np.subtract(seed_coord, fit_coord)) for fit_coord in fit_model.cluster_centers_]) 
                            for seed_coord in cluster_seeds ]
         aligned_seeds = np.choose(cluster_labels, nearest_centers).astype(np.int32)
@@ -109,7 +118,7 @@ def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
         # print(check_df.head(20))
 
     else:
-        return -1
+        return metrics.accuracy_score(cluster_labels, fit_model.labels_)
 
 """ testing iris classification """
 
@@ -123,15 +132,7 @@ iris.species = iris.species.astype(np.int32)
 # fig.savefig(f'./results/iris_clustering_1.svg',format='svg')
 
 """ testing randomly seeded signal clusters """
-# generating mock signal data to test clustering and PCA:
-# normal distribution blobs (with overlap) and different sample size
-mock_clusters_num = 4
-pop_size = 1000
-mock_centers = [[8+3*n,1.2+0.3*n*(n+1),8+n*n+3*n] for n in range(mock_clusters_num)]
-mock_stds = [1+0.2*n*n for n in range(mock_clusters_num)]
-mock_samples = [floor(pop_size*((1-n/mock_clusters_num))) for n in range(mock_clusters_num)]
-mock_X,mock_y, seed_centers = datasets.make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
-
+mock_X,mock_y, seed_centers = make_mock_clusters(4)
 mock_sig_data = pd.DataFrame(mock_X,columns=['amplitude','t_rise','t_decay'])
 mock_sig_data['label']=mock_y
 # visual check
@@ -143,11 +144,11 @@ mock_sig_data['label']=mock_y
 # fig.savefig(f'./results/mock_signal_seeded_clusters.svg',format='svg')
 
 res_model, fig = cluster_analyzer(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],
-                                  n_clusters=4, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1')
+                                  n_clusters=5, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1')
 accuracy= cluster_checker(res_model, mock_y,seed_centers)
 print(f'accuracy: {accuracy}')
 mock_sig_data['predicted_label']=res_model.labels_
 fig.savefig(f'./results/mock_signal_1_clustering_1.svg',format='svg')
 
-# print(mock_sig_data.head(10))
-# print(mock_sig_data.tail(10))
+# print(mock_sig_data.head(20))
+# print(mock_sig_data.tail(20))
