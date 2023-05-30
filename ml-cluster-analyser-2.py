@@ -13,11 +13,11 @@ def make_mock_clusters(mock_clusters_num):
     # normal distribution blobs (with overlap) and different sample size
     pop_size = 1000
     mock_centers = [[8+3*n,1.2+0.3*n*(n+1),8+n*n+3*n] for n in range(mock_clusters_num)]
-    mock_stds = [1+0.2*n*n for n in range(mock_clusters_num)]
+    mock_stds = [1.3+0.3*n*n for n in range(mock_clusters_num)]
     mock_samples = [floor(pop_size*((1-n/mock_clusters_num))) for n in range(mock_clusters_num)]
     return datasets.make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
 
-def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var=None, dataset_name=''):
+def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var=None, dataset_name='', n_mock=None):
     """ the function performs unsupervised clasterisation of signals (optionally - time lapsed) using K-Means 
         Arguments: 
             data - dataFrame containing (as columns): timestamps (optionally) and parameters of signals as independent variables,
@@ -39,7 +39,32 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
 
     model = KMeans(n_clusters=n_clusters, random_state=11, n_init='auto')
     model.fit(X)
-    
+    """ silhoutte analysis """
+    silhouette_avg = metrics.silhouette_score(X, model.labels_)
+    silhouette_values = metrics.silhouette_samples(X, model.labels_)
+    cluster_silouhette_df = pd.DataFrame(columns=["score_value","y_value","cluster_num"])
+    low_score_count = 0
+    silplot_y_gap = 10
+    silplot_y_up = 0
+    silplot_y_labels = []
+    for idx in range(n_clusters):
+        # aggregating and sorting the scores for cluster = idx and preparing data for plot
+        id_clust_silhouette_values = silhouette_values[model.labels_ == idx]
+        id_clust_silhouette_values.sort()
+        size = id_clust_silhouette_values.shape[0]
+        silplot_y_labels.append({"x":max(-0.05,id_clust_silhouette_values.min()),
+                                 "y":silplot_y_up+(idx+1.5)*silplot_y_gap,"text":str(idx)})
+        id_clust_y_values = np.linspace(silplot_y_up+idx*silplot_y_gap,silplot_y_up+size,num=size)
+        id_clust_labels = np.zeros(size,dtype=int) + idx
+        silplot_y_up += size
+        id_silh_df = pd.DataFrame({"score_value":id_clust_silhouette_values,"y_value":id_clust_y_values,"cluster_num":id_clust_labels})
+        cluster_silouhette_df=pd.concat([cluster_silouhette_df,id_silh_df], ignore_index=True)
+        max_score = id_clust_silhouette_values.max()
+        print(f'cluster {idx} scores - mean: {id_clust_silhouette_values.mean()} max: {max_score}')
+        if max_score < silhouette_avg:
+            low_score_count += 1
+    print(f'average silhouette score for {n_clusters} clusters: {silhouette_avg}, {low_score_count} lay fully below average ')
+
     # checking index /column name to populate column names for plotting
     if plot_vars != None :
         # plot_name_x = [data.columns[idx] for idx in range(data.columns.size) if (idx in x_vars) or (data.columns[idx] in x_vars)]
@@ -72,10 +97,10 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
     if (len(plot_name_y) < num_plots ):
         plot_name_y.append(plot_name_y[-1])
     # plotting
-    plot_data = data.loc[:,selected_vars]
+    plot_data = pd.DataFrame(data=data.loc[:,selected_vars])
     plot_data['cluster_num'] = model.labels_
     plot_rows = floor(sqrt(num_plots))
-    plot_cols = ceil(num_plots/plot_rows)
+    plot_cols = ceil(num_plots/plot_rows)+1 #extra column is needed for silhouette plot
     centers=model.cluster_centers_
     # names of data columns actually used in clustering, needed to plot centers
     var_names = list(X.columns.values)
@@ -89,7 +114,22 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
                         hue='cluster_num', palette="deep",ax=axs[row, col])
         axs[row, col].scatter(centers[:, var_names.index(plot_name_x[p_idx])], 
                               centers[:, var_names.index(plot_name_y[p_idx])], c="r", s=25, marker='X' )
-    fig.suptitle(f'{dataset_name} clustering', fontsize=12)
+   #plotting the silhouettes 
+    silh_ax = axs[0,plot_cols-1]
+    silh_ax.set_xlim([-0.1,1])
+    sns.lineplot(data=cluster_silouhette_df, x='score_value',y='y_value', 
+                 hue='cluster_num', palette='deep', legend=False, ax=silh_ax)
+    silh_ax.axvline(x=silhouette_avg, color="red", linestyle="--")
+    silh_ax.set_xlabel('The silhouette coefficient')
+    silh_ax.set_yticks([])
+    silh_ax.set_ylabel('Cluster label')
+    #labeling the silhouettes
+    for label in silplot_y_labels:
+        silh_ax.text(label['x'],label['y'],label['text'])
+    if n_mock != None:
+        fig.suptitle(f'{dataset_name} K-means fit for {n_mock} mock_clusters', fontsize=12) # for mock testing
+    else:
+        fig.suptitle(f'{dataset_name} K-means fit for {n_clusters} clusters', fontsize=12)  # real data analysis
     plt.show()
     return model, fig
 
@@ -113,10 +153,6 @@ def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
             return metrics.accuracy_score(aligned_seeds, fit_model.labels_)
         else:
             return -1
-        # check_df = pd.DataFrame(fit_model.labels_, columns=['predicted_label'])
-        # check_df['aligned_seed_label'] = aligned_seeds
-        # print(check_df.head(20))
-
     else:
         return metrics.accuracy_score(cluster_labels, fit_model.labels_)
 
@@ -130,9 +166,9 @@ iris.species = iris.species.astype(np.int32)
 # iris['predicted_label']=res_model.labels_
 # print(iris.head())
 # fig.savefig(f'./results/iris_clustering_1.svg',format='svg')
-
+n_mock_clusters = 4
 """ testing randomly seeded signal clusters """
-mock_X,mock_y, seed_centers = make_mock_clusters(4)
+mock_X,mock_y, seed_centers = make_mock_clusters(n_mock_clusters)
 mock_sig_data = pd.DataFrame(mock_X,columns=['amplitude','t_rise','t_decay'])
 mock_sig_data['label']=mock_y
 # visual check
@@ -143,12 +179,15 @@ mock_sig_data['label']=mock_y
 # plt.show()
 # fig.savefig(f'./results/mock_signal_seeded_clusters.svg',format='svg')
 
-res_model, fig = cluster_analyzer(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],
-                                  n_clusters=5, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1')
-accuracy= cluster_checker(res_model, mock_y,seed_centers)
-print(f'accuracy: {accuracy}')
-mock_sig_data['predicted_label']=res_model.labels_
-fig.savefig(f'./results/mock_signal_1_clustering_1.svg',format='svg')
 
-# print(mock_sig_data.head(20))
-# print(mock_sig_data.tail(20))
+test_clusters = [2,3,4,6]
+for clust_idx in test_clusters:
+    res_model, fig = cluster_analyzer(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],
+                                    n_clusters=clust_idx, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1', n_mock=n_mock_clusters)
+    accuracy= cluster_checker(res_model, mock_y,seed_centers)
+    print(f'accuracy: {accuracy}')
+    mock_sig_data['predicted_label']=res_model.labels_
+    fig.savefig(f'./results/mock_signal_clustering_{n_mock_clusters}_{clust_idx}.svg',format='svg')
+
+# print(mock_sig_data.head(10))
+# print(mock_sig_data.tail(10))
