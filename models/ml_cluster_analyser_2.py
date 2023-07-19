@@ -26,7 +26,7 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
             optional args:   
             ind_vars - an array-like contining indeces or names of columns with independent variables, default - any column except one named 'time'
             plot_vars 2D-array withcolumn names/indices of [x,y] variables for plotting
-            if None, conscuitive independent variables will be paired as x1,y1, x2,y2,...
+            if None, consecuitive independent variables will be paired as x1,y1, x2,y2,...
             time_var - name of column containing timestamp, used for plotting the time course, if None or 'index' the row index will be used
         Returns: the fitted model containing the cluster labels, cluster scatterplot and timecourse plot
     """
@@ -133,6 +133,83 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
     plt.show()
     return model, fig
 
+# looking for optimal cluster number with elbow method
+def find_elbow(values, x_vals= None, gradient=-1):
+    """ utility function to find the elbow in the array of values
+        Args:
+            values - an iterable of floats/integers,
+            x_vals (optional) - array of x-values, where elbow position is to be found,
+            if None, x_vals will be calculated as number of clusters, staritng from 2
+            gradient (optional) - a sign of supposed gradient of values against x_vals,
+            default is descending (-1)
+        Returns: an elbow position, 
+            determined as x_vals at index where decrement/increment in values starts to decline
+            or None if values is empty
+    """
+    if len(values) > 0:
+        if x_vals != None:
+            x_num = x_vals
+        else:
+            x_num = range(2,len(values)+2)
+        opt_idx = 1
+        delta_new = (values[1]-values[0])*gradient
+        delta_prev = 0
+        while opt_idx < len(values)-1 and delta_new >= delta_prev:
+            delta_prev = delta_new
+            opt_idx += 1
+            delta_new = (values[opt_idx] - values[opt_idx-1])*gradient
+        opt_num = x_num[opt_idx]
+        return opt_num
+    else:
+        return None
+
+def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5):
+    """ Utility function to evaluate optimal number of clusters by elbow method 
+    Args:   
+        data - dataFrame containing (as columns): timestamps (optionally) and parameters of signals as independent variables,
+        optional args:   
+            ind_vars - an array-like contining indeces or names of columns with independent variables, default - any column except one named 'time'
+            time_var - name of column containing timestamp, this column cannot be used as independent variable
+        ind_vars=None, plot_vars=None, time_var=None,
+        max_num - maximal number of clusters to check, within range(2,max_num), default is 5
+
+    Returns: y-data for optimal number of clusters
+    Plots: the elbow plot of error vs cluster number
+    """
+    # preparing the data for K-means fit
+    selected_vars = [False for idx in range(data.columns.size)]
+    if ind_vars == None:
+        selected_vars = [col for col in data.columns if col != time_var]
+    else:
+        selected_vars = [ (idx in ind_vars) or (data.columns[idx] in ind_vars) for idx in range(data.columns.size)  ]
+    X = data.loc[:,selected_vars]
+
+
+    cluster_num = range(2,max_num+1)
+    errors = []
+    for n in cluster_num :
+        # model = KMeans(featuresCol='standardized',k=n).fit(data_scale_output)
+        model = KMeans(n_clusters=n, random_state=11, n_init='auto')
+        model.fit(X)
+        errors.append(model.inertia_)
+        # errors.append(model.summary.trainingCost)    
+    opt_num = find_elbow(errors,x_vals=cluster_num)
+    # opt_idx = 1
+    # delta_new = errors[0]-errors[1]
+    # delta_prev = 0
+    # while opt_idx < len(errors)-1 and delta_new >= delta_prev:
+    #     delta_prev = delta_new
+    #     opt_idx += 1
+    #     delta_new = errors[opt_idx-1] - errors[opt_idx]
+    # opt_num = cluster_num[opt_idx-1]
+
+    plt.xlabel('Number of clusters (k)')
+    plt.ylabel('WCSS')
+    plt.plot(range(2,max_num+1), errors)
+    plt.show()
+    return opt_num
+
+
 
 def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
     """ utility function to check the accuracy of cluster labeling 
@@ -166,28 +243,34 @@ iris.species = iris.species.astype(np.int32)
 # iris['predicted_label']=res_model.labels_
 # print(iris.head())
 # fig.savefig(f'./results/iris_clustering_1.svg',format='svg')
-n_mock_clusters = 4
+
 """ testing randomly seeded signal clusters """
-mock_X,mock_y, seed_centers = make_mock_clusters(n_mock_clusters)
-mock_sig_data = pd.DataFrame(mock_X,columns=['amplitude','t_rise','t_decay'])
-mock_sig_data['label']=mock_y
-# visual check
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-# sns.scatterplot(data=mock_sig_data, x='amplitude', y='t_rise', hue='label', palette="deep",ax=ax1)
-# sns.scatterplot(data=mock_sig_data, x='amplitude', y='t_decay', hue='label', palette="deep",ax=ax2)
-# fig.suptitle(f'mock signals seeded clusters', fontsize=12)
-# plt.show()
-# fig.savefig(f'./results/mock_signal_seeded_clusters.svg',format='svg')
+n_mock_clusters = 4
+def test_random_clusters(elbow_max=9, cluster_plot=True):
+    """ this utility makes random n_mock_clusters and runs analyzer and checking functions """
+    mock_X,mock_y, seed_centers = make_mock_clusters(n_mock_clusters)
+    mock_sig_data = pd.DataFrame(mock_X,columns=['amplitude','t_rise','t_decay'])
+    mock_sig_data['label']=mock_y
+    # visual check
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    # sns.scatterplot(data=mock_sig_data, x='amplitude', y='t_rise', hue='label', palette="deep",ax=ax1)
+    # sns.scatterplot(data=mock_sig_data, x='amplitude', y='t_decay', hue='label', palette="deep",ax=ax2)
+    # fig.suptitle(f'mock signals seeded clusters', fontsize=12)
+    # plt.show()
+    # fig.savefig(f'./results/mock_signal_seeded_clusters.svg',format='svg')
 
+    if elbow_max > 1:
+        opt_num = elbow_cluster_number(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],max_num=9)
+        print(f'optimal cluster number {opt_num} ')
+    if cluster_plot:
+        test_clusters = [2,3,4,6]
+        for clust_idx in test_clusters:
+            res_model, fig = cluster_analyzer(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],
+                                            n_clusters=clust_idx, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1', n_mock=n_mock_clusters)
+            accuracy= cluster_checker(res_model, mock_y,seed_centers)
+            print(f'accuracy: {accuracy}')
+            mock_sig_data['predicted_label']=res_model.labels_
+            fig.savefig(f'./results/mock_signal_clustering_{n_mock_clusters}_{clust_idx}.svg',format='svg')
 
-test_clusters = [2,3,4,6]
-for clust_idx in test_clusters:
-    res_model, fig = cluster_analyzer(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],
-                                    n_clusters=clust_idx, plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']], dataset_name='Mock signals 1', n_mock=n_mock_clusters)
-    accuracy= cluster_checker(res_model, mock_y,seed_centers)
-    print(f'accuracy: {accuracy}')
-    mock_sig_data['predicted_label']=res_model.labels_
-    fig.savefig(f'./results/mock_signal_clustering_{n_mock_clusters}_{clust_idx}.svg',format='svg')
+# test_random_clusters(cluster_plot=False)
 
-# print(mock_sig_data.head(10))
-# print(mock_sig_data.tail(10))
