@@ -164,7 +164,8 @@ def find_elbow(values, x_vals= None, gradient=-1):
         return None
 
 def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5):
-    """ Utility function to evaluate optimal number of clusters by elbow method 
+    """ Utility function to evaluate optimal number of clusters by elbow method,
+        using three criteria of clustering performance (WCSS, C-H index and D-B index) 
     Args:   
         data - dataFrame containing (as columns): timestamps (optionally) and parameters of signals as independent variables,
         optional args:   
@@ -186,28 +187,42 @@ def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5):
 
 
     cluster_num = range(2,max_num+1)
-    errors = []
+    # conventional "within "within-cluster sum-of-squares" criterion
+    inertia = []
+    # Calinski-Harabasz Index
+    ch_index = []
+    # Davies-Bouldin Index
+    db_index = []
     for n in cluster_num :
         # model = KMeans(featuresCol='standardized',k=n).fit(data_scale_output)
         model = KMeans(n_clusters=n, random_state=11, n_init='auto')
         model.fit(X)
-        errors.append(model.inertia_)
+        inertia.append(model.inertia_)
+        ch_index.append(metrics.calinski_harabasz_score(X,model.labels_))
+        db_index.append(metrics.davies_bouldin_score(X,model.labels_))
         # errors.append(model.summary.trainingCost)    
-    opt_num = find_elbow(errors,x_vals=cluster_num)
-    # opt_idx = 1
-    # delta_new = errors[0]-errors[1]
-    # delta_prev = 0
-    # while opt_idx < len(errors)-1 and delta_new >= delta_prev:
-    #     delta_prev = delta_new
-    #     opt_idx += 1
-    #     delta_new = errors[opt_idx-1] - errors[opt_idx]
-    # opt_num = cluster_num[opt_idx-1]
-
+    wcss_num = find_elbow(inertia,x_vals=cluster_num)
+    ch_num = find_elbow(ch_index,x_vals=cluster_num, gradient=1)
+    db_num = find_elbow(db_index,x_vals=cluster_num)
+    plt.figure(figsize=(15,5))
+    plt.subplot(1,3,1)
     plt.xlabel('Number of clusters (k)')
     plt.ylabel('WCSS')
-    plt.plot(range(2,max_num+1), errors)
+    plt.plot(cluster_num, inertia)
+    plt.title('Inertia score')
+    plt.subplot(1,3,2)
+    plt.xlabel('Number of clusters (k)')
+    plt.ylabel('C-H index')
+    plt.plot(cluster_num, ch_index)
+    plt.title('Calinski-Harabasz score')
+    plt.subplot(1,3,3)
+    plt.xlabel('Number of clusters (k)')
+    plt.ylabel('D-B index')
+    plt.plot(cluster_num, db_index)
+    plt.title('Davies-Bouldin score')
     plt.show()
-    return opt_num
+
+    return wcss_num, ch_num, db_num
 
 
 
@@ -260,8 +275,8 @@ def test_random_clusters(elbow_max=9, cluster_plot=True):
     # fig.savefig(f'./results/mock_signal_seeded_clusters.svg',format='svg')
 
     if elbow_max > 1:
-        opt_num = elbow_cluster_number(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],max_num=9)
-        print(f'optimal cluster number {opt_num} ')
+        opt_nums = elbow_cluster_number(mock_sig_data,ind_vars=['amplitude','t_rise','t_decay'],max_num=9)
+        print(f'optimal cluster numbers by WCSS, C-H and D-B scores: {opt_nums} ')
     if cluster_plot:
         test_clusters = [2,3,4,6]
         for clust_idx in test_clusters:
@@ -272,5 +287,5 @@ def test_random_clusters(elbow_max=9, cluster_plot=True):
             mock_sig_data['predicted_label']=res_model.labels_
             fig.savefig(f'./results/mock_signal_clustering_{n_mock_clusters}_{clust_idx}.svg',format='svg')
 
-# test_random_clusters(cluster_plot=False)
+test_random_clusters(cluster_plot=False)
 
