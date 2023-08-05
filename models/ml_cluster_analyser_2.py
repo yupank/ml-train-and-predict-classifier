@@ -6,6 +6,7 @@ from sklearn import datasets
 from sklearn import metrics
 from src.ml_utils import make_mock_clusters, elbow_cluster_number
 from src.km_clustering import cluster_analyzer
+from src.opt_clustering import optics_cluster_analyser
 
 
 def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
@@ -70,5 +71,5 @@ def test_random_clusters(elbow_max=9, cluster_plot=True, elbow_plot=True):
             mock_sig_data['predicted_label']=res_model.labels_
             fig.savefig(f'./results/mock_signal_clustering_{n_mock_clusters}_{clust_idx}.svg',format='svg')
 
-test_random_clusters(cluster_plot=True, elbow_plot=True)
+# test_random_clusters(cluster_plot=True, elbow_plot=True)
 
