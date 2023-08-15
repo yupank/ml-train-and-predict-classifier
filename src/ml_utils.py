@@ -1,8 +1,10 @@
+import numpy as np
+from numpy import linalg as la
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.cluster import KMeans
-from sklearn import datasets
-from math import ceil, floor, sqrt
+from sklearn.datasets import make_blobs
+from math import floor
 
 def make_mock_clusters(mock_clusters_num):
     # utility function generating mock signal data to test clustering and PCA:
@@ -11,7 +13,30 @@ def make_mock_clusters(mock_clusters_num):
     mock_centers = [[8+3*n,1.2+0.3*n*(n+1),8+n*n+3*n] for n in range(mock_clusters_num)]
     mock_stds = [1.3+0.3*n*n for n in range(mock_clusters_num)]
     mock_samples = [floor(pop_size*((1-n/mock_clusters_num))) for n in range(mock_clusters_num)]
-    return datasets.make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
+    return make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
+
+
+def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
+    """ utility function to check the accuracy of cluster labeling 
+        Arguments: 
+            fitted model (KMeans or MeanShift), 
+            cluster_labels - an array-like labels for the data used to fit the model
+            cluster_seeds - array of parameters of claster centers used to generate data (e.g. used for making blobs),
+            needed to align fit_model.lables_ with lables for seeded clusters, picking the nearest one, 
+            if None, labels will be compared as they are
+        Returns: accuracy calculated using sklearn.metrics or -1 if parameters are incorrect
+    """
+    # align lables
+    if cluster_seeds.shape[0] == fit_model.cluster_centers_.shape[0]:
+        nearest_centers = [ np.argmin([ la.norm(np.subtract(seed_coord, fit_coord)) for fit_coord in fit_model.cluster_centers_]) 
+                           for seed_coord in cluster_seeds ]
+        aligned_seeds = np.choose(cluster_labels, nearest_centers).astype(np.int32)
+        if len(cluster_labels) == len(aligned_seeds):
+            return metrics.accuracy_score(aligned_seeds, fit_model.labels_)
+        else:
+            return -1
+    else:
+        return metrics.accuracy_score(cluster_labels, fit_model.labels_)
 
 # looking for optimal cluster number with elbow method
 def find_elbow(values, x_vals= None, gradient=-1):

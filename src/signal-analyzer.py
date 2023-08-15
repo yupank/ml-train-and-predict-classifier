@@ -2,6 +2,7 @@ import pandas as pd
 import sys
 
 from src.km_clustering import cluster_analyzer
+from src.ml_utils import elbow_cluster_number
 
 def read_input():
     if len(sys.argv) > 1 :
@@ -16,8 +17,14 @@ def read_input():
         return input_df
     except FileNotFoundError :
         return []
-red_data = read_input()
-if len(red_data) > 0:
-    print(red_data.head(5))
+raw_data = read_input()
+
+if 'time' not in raw_data.columns:
+    time_col = None
+else:
+    time_col = 'time'
+print(time_col)
+if len(raw_data) > 0:
+    print(raw_data.head(5))
 else:
     print ("file not found")
