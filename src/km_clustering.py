@@ -55,11 +55,11 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
         if max_score < silhouette_avg:
             low_score_count += 1
     print(f'average silhouette score for {n_clusters} clusters: {silhouette_avg}, {low_score_count} lay fully below average ')
-
+    #  plotting clusters
+    # names of data columns actually used in clustering, needed to plot centers
+    var_names = list(X.columns.values)
     # checking index /column name to populate column names for plotting
     if plot_vars != None :
-        # plot_name_x = [data.columns[idx] for idx in range(data.columns.size) if (idx in x_vars) or (data.columns[idx] in x_vars)]
-        # plot_name_y = [data.columns[idx] for idx in range(data.columns.size) if (idx in y_vars) or (data.columns[idx] in y_vars)]
         plot_name_x = []
         plot_name_y = []
         for var in plot_vars:
@@ -72,13 +72,13 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
             elif var[1] in range(data.columns.size):
                 plot_name_y.append(data.columns[var[1]])         
     else:
-         plot_name_x = [data.columns[idx] for idx in range(data.columns.size) if idx % 2 == 0]
-         plot_name_y = [data.columns[idx] for idx in range(data.columns.size) if idx % 2 == 1]
+         plot_name_x = [X.columns[idx] for idx in range(X.columns.size) if idx % 2 == 0]
+         plot_name_y = [X.columns[idx] for idx in range(X.columns.size) if idx % 2 == 1]
     
     if (len(plot_name_x)==0):
-        plot_name_x = [data.columns[idx] for idx in range(data.columns.size) if idx % 2 == 0]
+        plot_name_x = [X.columns[idx] for idx in range(X.columns.size) if idx % 2 == 0]
     if (len(plot_name_y)==0):
-        plot_name_y = [data.columns[idx] for idx in range(data.columns.size) if idx % 2 == 1]
+        plot_name_y = [X.columns[idx] for idx in range(X.columns.size) if idx % 2 == 1]
 
     #number of plots
     num_plots = max(len(plot_name_x), len(plot_name_y))
@@ -93,8 +93,7 @@ def cluster_analyzer(data, n_clusters=2, ind_vars=None, plot_vars=None, time_var
     plot_rows = floor(sqrt(num_plots))
     plot_cols = ceil(num_plots/plot_rows)+1 #extra column is needed for silhouette plot
     centers=model.cluster_centers_
-    # names of data columns actually used in clustering, needed to plot centers
-    var_names = list(X.columns.values)
+
     fig, axs = plt.subplots(plot_rows, plot_cols, squeeze=False, figsize=(4*plot_cols, 4*plot_rows))
     # sns.set_theme(style='darkgrid')
     sns.set_context("paper")
