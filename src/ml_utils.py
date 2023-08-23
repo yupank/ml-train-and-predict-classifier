@@ -71,7 +71,7 @@ def find_elbow(values, x_vals= None, gradient=-1):
         return None
     
 
-def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5, make_plots=False):
+def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5, make_plots=False, dataset_name=None, save_plots=False):
     """ Utility function to evaluate optimal number of clusters by elbow method,
         using three criteria of clustering performance (WCSS, C-H index and D-B index) 
     Args:   
@@ -113,7 +113,7 @@ def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5, make_plot
     ch_num = find_elbow(ch_index,x_vals=cluster_num, gradient=1)
     db_num = find_elbow(db_index,x_vals=cluster_num)
     if make_plots :
-        plt.figure(figsize=(15,5))
+        fig = plt.figure(figsize=(15,5))
         plt.subplot(1,3,1)
         plt.xlabel('Number of clusters (k)')
         plt.ylabel('WCSS')
@@ -129,6 +129,9 @@ def elbow_cluster_number(data, ind_vars=None, time_var=None,max_num=5, make_plot
         plt.ylabel('D-B index')
         plt.plot(cluster_num, db_index)
         plt.title('Davies-Bouldin score')
+        if dataset_name != None:
+            fig.suptitle(f'Clustering Scores for {dataset_name}',fontsize=12)
         plt.show()
-
+        if save_plots:
+            fig.savefig(f'./results/{dataset_name}/{dataset_name}_DBCH_scores.svg',format='svg')
     return wcss_num, ch_num, db_num
