@@ -7,7 +7,7 @@ from math import ceil, floor, sqrt
 from sklearn.cluster import MeanShift, estimate_bandwidth
 
 
-def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fraction=0.96, plot_vars=None, time_var=None, dataset_name=''):
+def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fraction=0.95, plot_vars=None, time_var=None, dataset_name=''):
     """ the function performs unsupervised clasterisation of signals using MeanShift method 
         Arguments: 
             data - dataFrame containing (as columns): timestamps (optionally) and parameters of signals as independent variables,
@@ -22,7 +22,7 @@ def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fr
         IMPORTANT !! the cluster labels will be moderated, as compared to the standard output of MeanShift().
         Analysis of real biological signals with MS typically gives few large clusters and several "outlier" clusters 
         containing 1-3 data points. As a remedy, cluster numbers will be moderated based on assumption 
-        the that 'main' clusters should comprise significant fraction (by default 97%) of data samples, 
+        the that 'main' clusters should comprise significant fraction (by default 95%) of data samples, 
         the "outlier" clusters with just a few data points will be piled together in the last cluster
     """
     """ IMPORTANT ! 
@@ -58,7 +58,6 @@ def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fr
     # sorting and calculating cumulative score to find the cut-off cluster number 
     cluster_sizes.sort_values('count', inplace=True, ascending=False, ignore_index=True)
     cluster_sizes['cum_score'] = cluster_sizes['count'].cumsum()
-    print(cluster_sizes)
 
     # number of clusters to be used for moderating lables
     n_clusters_mod = cluster_sizes[cluster_sizes.cum_score > cuttof_fraction]['initial_label'].idxmin()+1
@@ -66,8 +65,7 @@ def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fr
     clusters_df['moderated_label']=clusters_df['initial_label'].apply(
         lambda lab: lab if lab < n_clusters_mod else n_clusters_mod
     )
-    print(clusters_df.sample(25))
-    # n_clusters_mod = n_clusters_tot
+    # print(clusters_df.sample(25))
 
     #  plotting clusters
     # names of data columns actually used in clustering, needed to plot centers
@@ -124,24 +122,4 @@ def meanshift_cluster_analyzer(data,  ind_vars=None, bandwidth_q=0.15, cuttof_fr
 
 
 
-# testing with mock data
-# from ml_utils import make_mock_clusters, cluster_checker
 
-# mock_X,mock_y, seed_centers = make_mock_clusters(3)
-# mock_sig_data = pd.DataFrame(mock_X,columns=['amplitude','t_rise','t_decay'])
-
-# # ms_model, n_clusters, fig = meanshift_cluster_analyzer(mock_sig_data, ind_vars=['amplitude','t_decay'],dataset_name='Mock_signals')
-# ms_model, n_clusters, fig = meanshift_cluster_analyzer(mock_sig_data, ind_vars=['amplitude','t_rise','t_decay'],plot_vars=[['amplitude','t_rise'],['amplitude','t_decay']],dataset_name='Mock_signals')
-# mock_sig_data['predicted_label']=ms_model.labels_
-# mock_sig_data['label']=mock_y
-
-# print(f'Estimated number of clusters: {n_clusters} ')
-# accuracy = cluster_checker(ms_model, mock_y,seed_centers)
-# print(f'accuracy: {accuracy}')
-
-# # visual check
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-# sns.scatterplot(data=mock_sig_data, x='amplitude', y='predicted_label', hue='label', palette="deep",ax=ax1)
-# sns.scatterplot(data=mock_sig_data, x='t_decay', y='predicted_label', hue='label', palette="deep",ax=ax2)
-# fig.suptitle(f'mock signals seeded clusters', fontsize=12)
-# plt.show()
