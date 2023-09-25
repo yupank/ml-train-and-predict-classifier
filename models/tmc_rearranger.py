@@ -32,13 +32,10 @@ def read_data():
         if downsample < 1:
             downsample = 1
         rows_idx = list(range(0,len(input_df), downsample))
-        # print(rows_idx)
         output_df = input_df.iloc[rows_idx,:]
         return output_df, data_name
     except FileNotFoundError :
         return [], data_name
-
-
 
 def tmc_arrange(in_df, dataset_name, time_col=None):
     # Y-axis data columns
@@ -46,14 +43,12 @@ def tmc_arrange(in_df, dataset_name, time_col=None):
     # parameters for seamless concatenation
     y_tails = in_df[y_col_names].tail(10).mean()
     y_heads = in_df[y_col_names].head(10).mean()
-    # y_shift = [0]
-    # for i in range(1,len(y_col_names)):
-    #     y_shift.append(y_heads.loc[y_col_names[i]] - y_tails.loc[y_col_names[i-1]])
+
     data_size = len(in_df)
     sweep_dfs = []
     if time_col !=None:
         time_delta = (in_df[time_col].iat[-1] - in_df[time_col].iat[0])*(data_size+1)/data_size
-        # print(time_delta)
+
         sweep_dfs = [in_df.loc[:,[time_col, col]] for col in y_col_names]
         for i in range(1,len(sweep_dfs)):
             sweep_dfs[i][time_col] = sweep_dfs[i][time_col]+ time_delta*i
@@ -61,15 +56,11 @@ def tmc_arrange(in_df, dataset_name, time_col=None):
             y_tails.loc[y_col_names[i]] = y_tails.loc[y_col_names[i]] - y_shift
             sweep_dfs[i][y_col_names[i]] = sweep_dfs[i][y_col_names[i]] - y_shift
             sweep_dfs[i].columns=[time_col,y_col_names[0]]
-        for df in sweep_dfs:    
-            print(df.head())
         out_df = pd.concat(sweep_dfs, ignore_index=True)
-        print(out_df.head())
         out_df.to_csv(dataset_name + '_cnt.csv', index=False, mode='w+')
         out_df.plot(x=time_col)
     plt.show()
 
 
 raw_df, dataset_name = read_data()
-print(dataset_name)
 tmc_arrange(raw_df, dataset_name, time_col='time')
