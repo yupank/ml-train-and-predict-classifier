@@ -29,6 +29,7 @@ def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
     # align lables
     # print(f'shapes 0: {cluster_seeds.shape[0]} - {fit_model.cluster_centers_.shape[0]}')
     # print(f'shapes 1: {cluster_seeds.shape[1]} - {fit_model.cluster_centers_.shape[1]}')
+
     if cluster_seeds.shape[1] == fit_model.cluster_centers_.shape[1]:
         nearest_centers = [ np.argmin([ la.norm(np.subtract(seed_coord, fit_coord)) for fit_coord in fit_model.cluster_centers_]) 
                            for seed_coord in cluster_seeds ]

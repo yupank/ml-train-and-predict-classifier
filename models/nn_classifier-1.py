@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.datasets import make_moons
+from sklearn.datasets import make_moons, make_blobs
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from time import time
@@ -12,9 +12,19 @@ from time import time
 """" prototyping of more advanced classificator based on small
         two-hidden layer neural network (implemented "manualy"  vs PyTorch-based)"""
 
-# creating non-linearly separable mock dataset
-data_size = 2000
-mock_X, mock_y = make_moons(n_samples=data_size, noise=0.12)
+""" creating non-linearly separable mock dataset """
+# easy task - two 'moons'
+# data_size = 2000
+# mock_X, mock_y = make_moons(n_samples=data_size, noise=0.12, random_state=42)
+
+# more difficult task - moons and blobs
+data_size = 1600
+moon_X, moon_y = make_moons(n_samples=data_size, shuffle=True, noise=0.15, random_state=42)
+blob_X, blob_y, = make_blobs(n_samples=[int(data_size/2),int(data_size/2)],
+                                        centers=[[-0.7,-0.3],[1.7,0.8]],cluster_std=0.2, 
+                                        n_features=2,random_state=42)
+mock_X = np.concatenate((moon_X, blob_X))
+mock_y = np.concatenate((moon_y, blob_y))
 
 # visual check
 fig, ax1 = plt.subplots(1,1)
