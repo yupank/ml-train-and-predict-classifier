@@ -3,7 +3,7 @@ from numpy import linalg as la
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.cluster import KMeans
-from sklearn.datasets import make_blobs
+from sklearn.datasets import make_blobs, make_moons
 from math import floor
 
 def make_mock_clusters(mock_clusters_num):
@@ -15,6 +15,17 @@ def make_mock_clusters(mock_clusters_num):
     mock_samples = [floor(pop_size*((1-n/mock_clusters_num))) for n in range(mock_clusters_num)]
     return make_blobs(n_samples=mock_samples, centers=mock_centers, cluster_std=mock_stds,n_features=3, random_state=42, return_centers=True)
 
+def make_moon_clusters(blob_size=0, moon_size=1000, blob_ns=0.18, moon_ns=0.15):
+    moon_X, moon_y = make_moons(n_samples=moon_size, shuffle=True, noise=moon_ns, random_state=42)
+    if blob_size != 0:
+        blob_X, blob_y, = make_blobs(n_samples=[int(blob_size/2),int(blob_size/2)],
+                                            centers=[[-0.7,-0.3],[1.7,0.8]],cluster_std=blob_ns, 
+                                            n_features=2,random_state=42)
+        mock_X = np.concatenate((moon_X, blob_X))
+        mock_y = np.concatenate((moon_y, blob_y))
+        return mock_X, mock_y
+    else:
+        return moon_X, moon_y
 
 def cluster_checker(fit_model, cluster_labels, cluster_seeds=None):
     """ utility function to check the accuracy of cluster labeling 
