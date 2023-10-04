@@ -13,14 +13,22 @@ from time import time
 
 """" prototyping of more advanced classificator based on small
         two-hidden layer neural network (implemented "manualy"  vs PyTorch-based)"""
-
+""" NOTES: 
+    1) both implementations of 2 linear-layer networks show similar performance 
+        in regard of time needed to reach maximal accuracy/minimal loss, showing the best accuracy at test about 87%;
+    2) the only difference is that PyTorch-base network requires 10-times less training epochs, 
+        but overall execution time is the same;
+    3) increasing number of nodes in hidden layers does not improve accuracy of both models, with a litte effect on execution time;
+    4) IMPORTANT: accuracy of PyTorch-based network improved significantly (to 98% ) when ReLU activation layers were added after,
+        this did not increase the training time.
+"""
 """ creating non-linearly separable mock dataset """
 # easy task - two 'moons'
 # data_size = 2000
 # mock_X, mock_y = make_moons(n_samples=data_size, noise=0.12, random_state=42)
 
 """ helper function to visualize loss and accuracy during training """
-def show_training_tracks(loss_track, accur_track, ds_name='moons', net_name='clusterer', trial_prefix='1'):
+def show_training_tracks(loss_track, accur_track, ds_name='moons', net_name='clusterer', trial_prefix='1', epoch_scale=10):
     fig, axs = plt.subplots(1,2, figsize = (10,4))
     axs[0].plot(range(len(loss_track)), loss_track)
     axs[0].set_title('loss over training cycle')
@@ -28,7 +36,10 @@ def show_training_tracks(loss_track, accur_track, ds_name='moons', net_name='clu
     axs[0].set_ylabel('loss')
     axs[1].plot(range(len(accur_track)), accur_track, 'r--')
     axs[1].set_title('accuracy over each 10 epochs')
-    axs[1].set_xlabel('epoch X 10')
+    if epoch_scale > 1:
+        axs[1].set_xlabel(f'epoch X {epoch_scale}')
+    else:
+        axs[1].set_xlabel(f'epoch')
     fig.suptitle(f'training_cycle', fontsize=12)
     fig.savefig(f'./results/{ds_name}_{net_name}_{trial_prefix}.svg',format='svg')
     plt.show()
@@ -189,7 +200,11 @@ class SeqNet(nn.Module):
         super().__init__()
         self.snn = nn.Sequential(
             nn.Linear(inp_features, hl_1_nd),
+            #let's add some complexity
+            nn.ReLU(),
             nn.Linear(hl_1_nd, hl_2_nd),
+            #let's add some more
+            nn.ReLU(),
             nn.Linear(hl_2_nd,1),
             # nn.Softmax(dim=1)
             nn.Sigmoid()
@@ -201,13 +216,13 @@ class SeqNet(nn.Module):
         # return out
 
 
-def nn_clusterer_training(data_X, data_y, n_epochs=200, bs=500, learn_rate = 0.001):
+def nn_clusterer_training(data_X, data_y, n_epochs=200, bs=500, learn_rate = 0.005):
     train_dst = TensorDataset(torch.from_numpy(data_X).float(), torch.from_numpy(data_y).float())
     train_loader = torch.utils.data.DataLoader(dataset=train_dst, batch_size=bs, shuffle=True)
-    nnet = SeqNet()
+    nnet = SeqNet(hl_1_nd=8, hl_2_nd=3)
     criterion = nn.BCELoss()
     # criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(nnet.parameters(), lr=learn_rate, momentum=0.95)
+    optimizer = optim.SGD(nnet.parameters(), lr=learn_rate, momentum=0.9)
     loss_track = []
     accuracy_track = []
     # by some reason, metric.Accuracy does not work properly 
@@ -224,11 +239,9 @@ def nn_clusterer_training(data_X, data_y, n_epochs=200, bs=500, learn_rate = 0.0
             loss.backward()
             optimizer.step()
             run_loss += loss.item()
-            if ep%10 == 0:
-                run_accur += report_label_accuracy(labels, output)
+            run_accur += report_label_accuracy(labels, output)
         # calculating and tracking accuracy over the epoch
-        if ep%10 == 0:
-            accuracy_track.append(run_accur/(count+1))
+        accuracy_track.append(run_accur/(count+1))
         # tracking the loss
         loss_track.append(run_loss/(count+1))
 
@@ -239,14 +252,14 @@ def nn_clusterer_training(data_X, data_y, n_epochs=200, bs=500, learn_rate = 0.0
 
 """ training """
 data_size = 4000
-batch_size = 1000
+batch_size = 100
 test_size = 1000
 
 moon_X, moon_y = make_moon_clusters(int(data_size/2), data_size)
 start_tm = time()
-model, loss_track, accur_track = nn_clusterer_training(moon_X, moon_y, n_epochs=300, bs=500)
+model, loss_track, accur_track = nn_clusterer_training(moon_X, moon_y, n_epochs=80, bs=batch_size)
 end_tm = time()
-show_training_tracks(loss_track, accur_track, net_name='Seq_ptr', trial_prefix='3')
+show_training_tracks(loss_track, accur_track, net_name='Seq_ptr', trial_prefix='8relu3relu', epoch_scale=1)
 print(f'execution time: {end_tm-start_tm}')
 
 
